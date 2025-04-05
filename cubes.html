@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interactive 3D Rubik's Cube Game</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #343a40;
+    }
+
+    .game-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    .cube-container {
+      perspective: 1000px;
+      width: 300px;
+      height: 300px;
+    }
+
+    .cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s;
+    }
+
+    .face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 2px solid #000;
+      box-sizing: border-box;
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .cubelet {
+      width: 33.33%;
+      height: 33.33%;
+      box-sizing: border-box;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .cubelet:hover {
+      transform: scale(1.05);
+      z-index: 10;
+    }
+
+    /* Face positions */
+    .front { transform: translateZ(150px); }
+    .back { transform: rotateY(180deg) translateZ(150px); }
+    .right { transform: rotateY(90deg) translateZ(150px); }
+    .left { transform: rotateY(-90deg) translateZ(150px); }
+    .top { transform: rotateX(90deg) translateZ(150px); }
+    .bottom { transform: rotateX(-90deg) translateZ(150px); }
+
+    /* Colors */
+    .white { background-color: #ffffff; }
+    .yellow { background-color: #ffeb3b; }
+    .red { background-color: #f44336; }
+    .orange { background-color: #ff9800; }
+    .blue { background-color: #2196f3; }
+    .green { background-color: #4caf50; }
+
+    .controls {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .btn-group {
+      margin: 10px;
+    }
+
+    .rotation-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .rotation-axis {
+      margin: 0 15px;
+    }
+
+    .game-info {
+      background-color: #e9ecef;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+    }
+
+    .timer, .movements, .score {
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .status {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .solved {
+      background-color: #d4edda;
+      color: #155724;
+      animation: solved-blink 1s infinite;
+    }
+
+    .scrambled {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    @keyframes solved-blink {
+      0%, 100% { background-color: #d4edda; }
+      50% { background-color: #c3e6cb; }
+    }
+
+    .help-steps {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: white;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .face-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .face-btn {
+      width: 80px;
+    }
+
+    .chapman {
+      background-color: #f0f8ff;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .chapman h3 {
+      font-size: 24px;
+      color: #1e2a47;
+    }
+
+    .chapman p {
+      font-size: 18px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Interactive Rubik's Cube Game</h1>
+    <br>
+    <br>
+    <br>
+    <div class="game-area">
+      <div class="cube-container">
+        <div class="cube" id="cube"></div>
+      </div>
+
+      <div class="game-info">
+        <div class="timer" id="timer">00:00:00</div>
+        <div class="movements" id="movements">Moves: 0</div>
+        <div class="score" id="score">Score: 0</div>
+        <div class="status scrambled" id="status">Cube is scrambled</div>
+
+        <div class="controls">
+          <button class="btn btn-success" id="startBtn">Start Game</button>
+          <button class="btn btn-danger" id="resetBtn">Reset</button>
+          <button class="btn btn-info" id="helpBtn">Get Help</button>
+        </div>
+
+        <div class="face-controls">
+          <button class="btn btn-primary face-btn" onclick="rotateFace('front', 90)">Front ↻</button>
+          <button class="btn btn-primary face-btn" onclick="rotateFace('back', 90)">Back ↻</button>
+          <button class="btn btn-primary face-btn" onclick="rotateFace('right', 90)">Right ↻</button>
+          <button class="btn btn-primary face-btn" onclick="rotateFace('left', 90)">Left ↻</button>
+          <button class="btn btn-primary face-btn" onclick="rotateFace('top', 90)">Top ↻</button>
+          <button class="btn btn-primary face-btn" onclick="rotateFace('bottom', 90)">Bottom ↻</button>
+        </div>
+
+        <div class="rotation-buttons">
+          <div class="rotation-axis">
+            <h5>View</h5>
+            <div class="btn-group">
+              <button class="btn btn-secondary" onclick="rotateCube('x', 90)">↑</button>
+              <button class="btn btn-secondary" onclick="rotateCube('x', -90)">↓</button>
+              <button class="btn btn-secondary" onclick="rotateCube('y', 90)">→</button>
+              <button class="btn btn-secondary" onclick="rotateCube('y', -90)">←</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-steps" id="helpSteps"></div>
+
+        <div class="chapman">
+          <h3>Chapman Ganigen (Guides)</h3>
+          <p>Need help solving the cube? Follow the steps outlined in the "Get Help" section. </p>
+          <p>Or check the "Get Help" for detailed strategies and tips!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const cube = document.getElementById('cube');
+    const timerElement = document.getElementById('timer');
+    const movementsElement = document.getElementById('movements');
+    const scoreElement = document.getElementById('score');
+    const statusElement = document.getElementById('status');
+    const helpStepsElement = document.getElementById('helpSteps');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    const chapman = document.querySelector('.chapman');
+
+    let currentRotation = { x: 20, y: -20, z: 0 };
+    let timerInterval;
+    let startTime;
+    let elapsedTime = 0;
+    let moves = 0;
+    let score = 0;
+
+    // Load saved game state from localStorage
+    const savedScore = localStorage.getItem('rubiksScore');
+    const savedMoves = localStorage.getItem('rubiksMoves');
+    if (savedScore && savedMoves) {
+      score = parseInt(savedScore);
+      moves = parseInt(savedMoves);
+      updateHUD();
+    }
+
+    const faces = [
+      { name: 'front', color: 'white' },
+      { name: 'back', color: 'yellow' },
+      { name: 'right', color: 'red' },
+      { name: 'left', color: 'orange' },
+      { name: 'top', color: 'blue' },
+      { name: 'bottom', color: 'green' }
+    ];
+
+    faces.forEach(face => {
+      const faceElement = document.createElement('div');
+      faceElement.className = `face ${face.name}`;
+      for (let i = 0; i < 9; i++) {
+        const cubelet = document.createElement('div');
+        cubelet.className = `cubelet ${face.color}`;
+        cubelet.dataset.face = face.name;
+        cubelet.dataset.position = i;
+        faceElement.appendChild(cubelet);
+      }
+      cube.appendChild(faceElement);
+    });
+
+    updateCubeRotation();
+
+    startBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', resetGame);
+    helpBtn.addEventListener('click', getHelp);
+
+    function startGame() {
+      if (startBtn.textContent === 'Start Game') {
+        startBtn.textContent = 'Scramble Cube';
+        elapsedTime = 0;
+        moves = 0;
+        score = 0;
+        updateHUD();
+        startTimer();
+        scrambleCube();
+        statusElement.textContent = 'Cube is scrambled - Start solving!';
+        statusElement.className = 'status scrambled';
+        helpStepsElement.innerHTML = '';
+      } else {
+        scrambleCube();
+        statusElement.textContent = 'Cube is scrambled - Keep solving!';
+        statusElement.className = 'status scrambled';
+        helpStepsElement.innerHTML = '';
+      }
+    }
+
+    function resetGame() {
+      clearInterval(timerInterval);
+      timerElement.textContent = '00:00:00';
+      startBtn.textContent = 'Start Game';
+      elapsedTime = 0;
+      moves = 0;
+      score = 0;
+      updateHUD();
+      resetCube();
+      statusElement.textContent = 'Ready to start';
+      statusElement.className = 'status';
+      helpStepsElement.innerHTML = '';
+    }
+
+    function updateHUD() {
+      movementsElement.textContent = `Moves: ${moves}`;
+      scoreElement.textContent = `Score: ${score}`;
+      localStorage.setItem('rubiksScore', score);
+      localStorage.setItem('rubiksMoves', moves);
+    }
+
+    function startTimer() {
+      startTime = Date.now() - elapsedTime;
+      timerInterval = setInterval(updateTimer, 10);
+    }
+
+    function updateTimer() {
+      const now = Date.now();
+      elapsedTime = now - startTime;
+      const hrs = Math.floor(elapsedTime / 3600000);
+      const mins = Math.floor((elapsedTime % 3600000) / 60000);
+      const secs = Math.floor((elapsedTime % 60000) / 1000);
+      const ms = Math.floor((elapsedTime % 1000) / 10);
+      timerElement.textContent = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    }
+
+    function rotateCube(axis, deg) {
+      currentRotation[axis] += deg;
+      cube.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg) rotateZ(${currentRotation.z}deg)`;
+    }
+
+    function rotateFace(face, deg, check = true) {
+      moves++;
+      updateHUD();
+      const faceEl = document.querySelectorAll(`.${face} .cubelet`);
+      faceEl.forEach(c => {
+        c.style.transform = `rotate(${deg}deg)`;
+        setTimeout(() => c.style.transform = '', 300);
+      });
+
+      if (check) {
+        setTimeout(() => {
+          if (isCubeSolved()) {
+            clearInterval(timerInterval);
+            statusElement.textContent = '🎉 Bravo ! Cube Résolu !';
+            statusElement.className = 'status solved';
+            score += 100; // Bonus
+            updateHUD();
+          }
+        }, 400);
+      }
+    }
+
+    function scrambleCube() {
+      const facesList = ['front', 'back', 'right', 'left', 'top', 'bottom'];
+      for (let i = 0; i < 20; i++) {
+        const face = facesList[Math.floor(Math.random() * facesList.length)];
+        const deg = Math.random() > 0.5 ? 90 : -90;
+        setTimeout(() => rotateFace(face, deg, false), i * 100);
+      }
+    }
+
+    function resetCube() {
+      const cubelets = document.querySelectorAll('.cubelet');
+      cubelets.forEach(c => {
+        const face = c.dataset.face;
+        c.className = `cubelet ${faces.find(f => f.name === face).color}`;
+      });
+      currentRotation = { x: 20, y: -20, z: 0 };
+      updateCubeRotation();
+    }
+
+    function updateCubeRotation() {
+      cube.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg) rotateZ(${currentRotation.z}deg)`;
+    }
+
+    function isCubeSolved() {
+      const faces = document.querySelectorAll('.face');
+      return Array.from(faces).every(face => {
+        const color = face.querySelector('.cubelet').style.backgroundColor;
+        return Array.from(face.children).every(cubelet => cubelet.style.backgroundColor === color);
+      });
+    }
+
+    function getHelp() {
+      helpStepsElement.innerHTML = `
+        <h5>Guide to Solve the Cube:</h5>
+        <ul>
+          <li>1. Solve the white cross.</li>
+          <li>2. Complete the white corners.</li>
+          <li>3. Solve the middle layer edges.</li>
+          <li>4. Create a yellow cross on top.</li>
+          <li>5. Solve the yellow corners.</li>
+          <li>6. Finish by positioning the yellow corners correctly.</li>
+        </ul>
+      `;
+    }
+  </script>
+</body>
+</html>
